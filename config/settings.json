@@ -6,13 +6,14 @@
         "format": "mp4"
     },
     "notifications": {
-        "email_enabled": false,
+        "email_enabled": true,
         "smtp_server": "smtp.gmail.com",
         "smtp_port": 587,
-        "smtp_username": "",
-        "from_email": "",
-        "email_to": "",
-        "push_enabled": false
+        "smtp_username": "smartnvrai@gmail.com",
+        "from_email": "smartnvrai@gmail.com",
+        "email_to": "ranjanjyoti154@gmail.com",
+        "push_enabled": false,
+        "smtp_password": "gslpkvfvgrpzognm"
     },
     "system": {
         "log_level": "info"

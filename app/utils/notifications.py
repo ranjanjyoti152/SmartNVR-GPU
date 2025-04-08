@@ -10,6 +10,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Track if we've already logged that emails are disabled
+_email_disabled_logged = False
+
 def load_config():
     """Load email configuration from settings file"""
     config_file = os.path.join('config', 'settings.json')
@@ -24,12 +27,16 @@ def load_config():
 
 def send_detection_email(camera, detection):
     """Send email notification for a detection event"""
+    global _email_disabled_logged
+    
     # Load email config
     email_config = load_config()
     
     # Check if email notifications are enabled
     if not email_config.get('enabled', False):
-        logger.info("Email notifications are disabled")
+        if not _email_disabled_logged:
+            logger.info("Email notifications are disabled")
+            _email_disabled_logged = True
         return False
     
     # Check required parameters

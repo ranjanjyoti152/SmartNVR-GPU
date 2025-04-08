@@ -131,6 +131,7 @@ def main():
             file_size INTEGER,
             recording_type TEXT NOT NULL DEFAULT 'continuous',
             is_flagged BOOLEAN NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (camera_id) REFERENCES camera (id)
         )
         ''')

@@ -22,6 +22,102 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # --- Camera API Endpoints ---
 
+# Function to handle detection reports from camera processor
+def report_detection(request):
+    """
+    Process detection report from camera processor
+    Not a route, called directly from camera processor
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'camera_id' not in data or 'detections' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid detection data format'
+            }), 400
+            
+        camera_id = data['camera_id']
+        camera = Camera.query.get(camera_id)
+        
+        if not camera:
+            return jsonify({
+                'success': False,
+                'message': f'Camera not found: {camera_id}'
+            }), 404
+            
+        detections_data = data['detections']
+        
+        if not detections_data:
+            # No detections to process
+            return jsonify({
+                'success': True,
+                'message': 'No detections to process'
+            })
+            
+        # Get or create recording based on timestamp of first detection
+        recording = None
+        detection_timestamp = None
+        
+        if detections_data and 'timestamp' in detections_data[0]:
+            detection_timestamp = detections_data[0]['timestamp']
+            if isinstance(detection_timestamp, str):
+                detection_timestamp = datetime.fromisoformat(detection_timestamp)
+                
+            # Look for existing recording in the last minute
+            recent_recording = Recording.query.filter(
+                Recording.camera_id == camera_id,
+                Recording.timestamp >= detection_timestamp - timedelta(minutes=1)
+            ).order_by(Recording.timestamp.desc()).first()
+            
+            recording = recent_recording
+        
+        # Process each detection
+        new_detections = []
+        for det_data in detections_data:
+            # Create detection object
+            detection = Detection(
+                camera_id=camera_id,
+                recording_id=recording.id if recording else None,
+                roi_id=det_data.get('roi_id'),
+                timestamp=det_data.get('timestamp', datetime.now()) if isinstance(det_data.get('timestamp'), datetime) else datetime.now(),
+                class_name=det_data.get('class_name', 'unknown'),
+                confidence=det_data.get('confidence', 0.0),
+                bbox_x=det_data.get('bbox_x', 0),
+                bbox_y=det_data.get('bbox_y', 0),
+                bbox_width=det_data.get('bbox_width', 0),
+                bbox_height=det_data.get('bbox_height', 0),
+                image_path=det_data.get('image_path'),
+                video_path=det_data.get('video_path'),
+                notified=False
+            )
+            
+            db.session.add(detection)
+            new_detections.append(detection)
+        
+        db.session.commit()
+        
+        # Send notifications for new detections if configured
+        # We do this after commit to ensure IDs are available
+        for detection in new_detections:
+            try:
+                from app.utils.notifications import send_detection_email
+                send_detection_email(camera, detection)
+            except Exception as e:
+                print(f"Error sending notification: {str(e)}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Processed {len(new_detections)} detections'
+        })
+    
+    except Exception as e:
+        print(f"Error processing detection report: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
 @api_bp.route('/cameras')
 @login_required
 def get_cameras():
@@ -165,10 +261,16 @@ def create_camera_roi(camera_id):
     camera = Camera.query.get_or_404(camera_id)
     data = request.json
     
-    if not data or not all(key in data for key in ['name', 'coordinates', 'detection_classes']):
+    if not data:
         return jsonify({
             'success': False,
-            'message': 'Missing required fields'
+            'message': 'No data provided'
+        }), 400
+        
+    if not all(key in data for key in ['name', 'coordinates']):
+        return jsonify({
+            'success': False,
+            'message': 'Missing required fields: name and coordinates'
         }), 400
     
     # Create new ROI
@@ -176,7 +278,7 @@ def create_camera_roi(camera_id):
         camera_id=camera.id,
         name=data['name'],
         coordinates=json.dumps(data['coordinates']),
-        detection_classes=json.dumps(data['detection_classes']),
+        detection_classes=json.dumps(data.get('detection_classes', [])),
         is_active=data.get('is_active', True)
     )
     

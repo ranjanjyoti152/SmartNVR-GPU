@@ -39,13 +39,22 @@ class ROI(db.Model):
     def to_dict(self):
         """Convert ROI to dictionary for API and frontend"""
         import json
+        
+        # Handle coordinates properly for frontend compatibility
+        coordinates = self.coordinates
+        if isinstance(coordinates, str):
+            try:
+                coordinates = json.loads(coordinates)
+            except:
+                coordinates = []
+        
         return {
             'id': self.id,
             'camera_id': self.camera_id,
             'name': self.name,
-            'description': None,  # For backward compatibility
-            'points': json.loads(self.coordinates) if isinstance(self.coordinates, str) else self.coordinates,
-            'active': self.is_active,
-            'color': "#FF0000",  # Default color
+            'coordinates': coordinates,
+            'points': coordinates,  # For backward compatibility
+            'is_active': self.is_active,
+            'active': self.is_active,  # For backward compatibility
             'detection_classes': json.loads(self.detection_classes) if isinstance(self.detection_classes, str) and self.detection_classes else []
         }

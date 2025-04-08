@@ -35,8 +35,8 @@ config/local_settings.json
 *.mlmodel
 *.tflite
 *.pb
-models/
-yolov5*/
+/models/
+/yolov5*/
 
 # Media files & recordings (too large for GitHub)
 storage/

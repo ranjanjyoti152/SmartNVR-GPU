@@ -520,14 +520,15 @@ class CameraProcessor:
                     def headers(self):
                         return {'X-API-Key': app.config.get('API_KEY', '')}
                 
-                # Call the API function directly
-                report_detection(MockRequest())
+                # Call the API function directly within the app context
+                with app.app_context():
+                    report_detection(MockRequest())
             else:
                 # Make external API call
                 api_url = f"http://localhost:8000/api/detections"
                 headers = {'X-API-Key': 'YOUR_API_KEY'}  # This should be properly configured
                 requests.post(api_url, json=payload, headers=headers, timeout=2.0)
-                
+            
             logger.info(f"Reported {len(detections)} detections for camera {self.camera.id}")
             
         except Exception as e:

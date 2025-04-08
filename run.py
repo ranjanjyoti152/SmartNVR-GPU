@@ -8,12 +8,19 @@ import threading
 import time
 import argparse
 import sys
+import signal
 from app import app, db
 from app.utils.camera_processor import CameraManager
 from app.models.user import User
 
+# Global flag for signaling shutdown
+shutdown_requested = False
+
 def setup_logging():
     """Configure logging for the application"""
+    # Ensure logs directory exists
+    os.makedirs('logs', exist_ok=True)
+    
     log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(
         level=logging.INFO,
@@ -25,6 +32,25 @@ def setup_logging():
     )
     logger = logging.getLogger(__name__)
     return logger
+
+def signal_handler(sig, frame):
+    """Handle shutdown signals gracefully"""
+    global shutdown_requested
+    if shutdown_requested:
+        logger.info("Forced shutdown requested, exiting immediately")
+        sys.exit(1)
+    
+    logger.info("Shutdown signal received, stopping application...")
+    shutdown_requested = True
+    
+    # Stop all camera processors
+    logger.info("Stopping camera processors...")
+    camera_manager = CameraManager.get_instance()
+    camera_manager.stop_all_cameras()
+    
+    # Allow a short time for cleanup
+    logger.info("Cleanup complete, exiting")
+    sys.exit(0)
 
 def initialize_database():
     """Verify database exists and is accessible"""
@@ -90,13 +116,17 @@ if __name__ == '__main__':
     # Parse command line arguments
     args = parse_arguments()
     
-    # Set up logging
+    # Create required directories first
+    for directory in ['logs', 'models', 'config', 'storage/recordings', 'storage/models', 'instance']:
+        os.makedirs(directory, exist_ok=True)
+    
+    # Set up logging after directories are created
     logger = setup_logging()
     logger.info("Starting SmartNVR...")
     
-    # Create required directories
-    for directory in ['logs', 'models', 'config', 'storage/recordings', 'storage/models', 'instance']:
-        os.makedirs(directory, exist_ok=True)
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     # Download models if requested
     if args.download_models:
