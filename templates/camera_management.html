@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCameraModal">
+            <i class="fas fa-plus"></i> Add Camera
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    {% if cameras %}
+        {% for camera in cameras %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ camera.name }}</h5>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input camera-toggle" type="checkbox" role="switch" 
+                            id="camera-enabled-{{ camera.id }}" data-camera-id="{{ camera.id }}" 
+                            {% if camera.enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="camera-enabled-{{ camera.id }}">
+                            {{ 'Enabled' if camera.enabled else 'Disabled' }}
+                        </label>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p><strong>URL:</strong> {{ camera.url }}</p>
+                    <p><strong>Location:</strong> {{ camera.location }}</p>
+                    <p>
+                        <span class="badge bg-{{ 'success' if camera.status == 'online' else 'danger' }}">
+                            {{ camera.status|capitalize }}
+                        </span>
+                        <span class="badge bg-{{ 'success' if camera.recording_enabled else 'secondary' }}">
+                            {{ 'Recording' if camera.recording_enabled else 'Not Recording' }}
+                        </span>
+                        <span class="badge bg-{{ 'success' if camera.detection_enabled else 'secondary' }}">
+                            {{ 'AI Detection' if camera.detection_enabled else 'No AI Detection' }}
+                        </span>
+                    </p>
+                </div>
+                <div class="card-footer text-center">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary edit-camera"
+                            data-camera-id="{{ camera.id }}" data-bs-toggle="modal" data-bs-target="#editCameraModal">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <a href="#" class="btn btn-sm btn-outline-secondary" onclick="return false;">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-camera"
+                            data-camera-id="{{ camera.id }}" data-camera-name="{{ camera.name }}"
+                            data-bs-toggle="modal" data-bs-target="#deleteCameraModal">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No cameras have been added yet. Click "Add Camera" to add your first camera.
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Add Camera Modal -->
+<div class="modal fade" id="addCameraModal" tabindex="-1" aria-labelledby="addCameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCameraModalLabel">Add New Camera</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('main.add_camera') }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Camera Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rtsp_url" class="form-label">RTSP URL</label>
+                        <input type="text" class="form-control" id="rtsp_url" name="rtsp_url" 
+                            placeholder="rtsp://example.com/stream" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" name="location">
+                    </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username (if required)</label>
+                        <input type="text" class="form-control" id="username" name="username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password (if required)</label>
+                        <input type="password" class="form-control" id="password" name="password">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="enabled" name="enabled" checked>
+                                <label class="form-check-label" for="enabled">
+                                    Enable Camera
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="recording_enabled" name="recording_enabled" checked>
+                                <label class="form-check-label" for="recording_enabled">
+                                    Enable Recording
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="detection_enabled" name="detection_enabled" checked>
+                        <label class="form-check-label" for="detection_enabled">
+                            Enable AI Detection
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Camera</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Camera Modal (will be populated by JavaScript) -->
+<div class="modal fade" id="editCameraModal" tabindex="-1" aria-labelledby="editCameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCameraModalLabel">Edit Camera</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editCameraForm" action="{{ url_for('main.edit_camera', camera_id=0) }}" method="post">
+                <div class="modal-body">
+                    <!-- To be populated dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Camera Confirmation Modal -->
+<div class="modal fade" id="deleteCameraModal" tabindex="-1" aria-labelledby="deleteCameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteCameraModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the camera "<span id="deleteCameraName"></span>"?</p>
+                <p class="text-danger">This will permanently remove the camera and all its recordings.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteCameraForm" action="{{ url_for('main.delete_camera', camera_id=0) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Delete Camera</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Script to handle camera edit modal
+document.querySelectorAll('.edit-camera').forEach(button => {
+    button.addEventListener('click', function() {
+        const cameraId = this.getAttribute('data-camera-id');
+        // Here we would normally fetch the camera data with AJAX
+        // For now, we'll just update the form action
+        const form = document.getElementById('editCameraForm');
+        form.action = form.action.replace('/0', `/${cameraId}`);
+    });
+});
+
+// Script to handle camera delete modal
+document.querySelectorAll('.delete-camera').forEach(button => {
+    button.addEventListener('click', function() {
+        const cameraId = this.getAttribute('data-camera-id');
+        const cameraName = this.getAttribute('data-camera-name');
+        document.getElementById('deleteCameraName').textContent = cameraName;
+        const form = document.getElementById('deleteCameraForm');
+        form.action = form.action.replace('/0', `/${cameraId}`);
+    });
+});
+</script>
+{% endblock %}

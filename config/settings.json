@@ -1,0 +1,24 @@
+{
+    "recording": {
+        "retention_days": 30,
+        "storage_path": "storage/recordings",
+        "clip_length": 60,
+        "format": "mp4"
+    },
+    "notifications": {
+        "email_enabled": false,
+        "smtp_server": "smtp.gmail.com",
+        "smtp_port": 587,
+        "smtp_username": "",
+        "from_email": "",
+        "email_to": "",
+        "push_enabled": false
+    },
+    "system": {
+        "log_level": "info"
+    },
+    "detection": {
+        "default_confidence": 0.45,
+        "default_model": "Ranjan"
+    }
+}
