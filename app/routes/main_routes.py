@@ -175,12 +175,31 @@ def delete_camera(camera_id):
     except Exception as e:
         flash(f'Warning: Error stopping camera processor: {str(e)}', 'warning')
     
-    # Delete from database
+    # Import models and db
     from app import db
-    db.session.delete(camera)
-    db.session.commit()
+    from app.models.detection import Detection
+    from app.models.recording import Recording
+    from app.models.roi import ROI
     
-    flash(f'Camera {camera_name} deleted successfully', 'success')
+    try:
+        # Delete related detections first
+        Detection.query.filter_by(camera_id=camera_id).delete()
+        
+        # Delete related recordings
+        Recording.query.filter_by(camera_id=camera_id).delete()
+        
+        # Delete related ROIs
+        ROI.query.filter_by(camera_id=camera_id).delete()
+        
+        # Now delete the camera
+        db.session.delete(camera)
+        db.session.commit()
+        
+        flash(f'Camera {camera_name} deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting camera: {str(e)}', 'danger')
+    
     return redirect(url_for('main.camera_management'))
 
 @main_bp.route('/settings')
